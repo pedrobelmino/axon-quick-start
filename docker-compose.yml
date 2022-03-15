@@ -7,11 +7,13 @@ services:
     expose:
       - '8081'
     environment:
-      SQLSERVER_HOST: sqlserver
+      MYSQL_HOST: mysqlserver
       AXON_HOST: axonserver
+    depends_on:
+      - mysqlserver
     networks:
       - web
-      - db-sqlserver
+      - db-mysql
       - axon
   chat-query:
     build: chat-query
@@ -20,11 +22,13 @@ services:
     expose:
       - '8080'
     environment:
-      MYSQL_HOST: mysqlserver
+      MYSQL_HOST: mysqlserver-slave
       AXON_HOST: axonserver
+    depends_on:
+      - mysqlserver-slave
     networks:
       - web
-      - db-mysql
+      - db-mysql-slave
       - axon
 
   mysqlserver:
@@ -32,7 +36,7 @@ services:
     hostname: mysqlserver
     restart: always
     environment:
-      MYSQL_DATABASE: 'db-slave'
+      MYSQL_DATABASE: 'db'
       MYSQL_USER: 'user'
       MYSQL_PASSWORD: '1234qwer'
       MYSQL_ROOT_PASSWORD: '1234qwer'
@@ -45,21 +49,23 @@ services:
     networks:
       - db-mysql
 
-  sqlserver:
-    image: mcr.microsoft.com/mssql/server:2019-CU5-ubuntu-18.04
-    container_name: MsSqlServer
+  mysqlserver-slave:
+    image: mysql:5.7
+    hostname: mysqlserver-slave
+    restart: always
     environment:
-      - ACCEPT_EULA=Y
-      - SA_PASSWORD=1234!QweR
+      MYSQL_DATABASE: 'db-slave'
+      MYSQL_USER: 'user'
+      MYSQL_PASSWORD: '1234qwer'
+      MYSQL_ROOT_PASSWORD: '1234qwer'
     ports:
-      - "1433:1433"
+      - '3307:3306'
     expose:
-      - "1433"
-#    volumes:
-#      - db-sqlserver:/var/opt/mssql/data
+      - '3307'
+    volumes:
+      - db-mysql-slave:/var/lib/mysql
     networks:
-      - db-sqlserver
-
+      - db-mysql-slave
 
   axonserver:
     image: axoniq/axonserver
@@ -77,7 +83,7 @@ services:
 
 volumes:
   db-mysql:
-  db-sqlserver:
+  db-mysql-slave:
   axonserver-data:
   axonserver-events:
   axonserver-config:
@@ -85,5 +91,5 @@ volumes:
 networks:
   axon:
   db-mysql:
-  db-sqlserver:
+  db-mysql-slave:
   web:
